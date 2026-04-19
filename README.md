@@ -130,3 +130,6 @@ Open [http://localhost:3000](http://localhost:3000).
 3. Deploy — `prisma generate` runs automatically via `postinstall`
 
 > Use the **Session Pooler** URL from Supabase (not the direct connection) — Vercel's serverless functions require it.
+
+## Deployment (Vercel) Link:
+kiraya-dar.vercel.app
