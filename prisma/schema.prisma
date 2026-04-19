@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               String   @id @default(cuid())
+  phone            String   @unique
+  name             String
+  cnic             String?
+  bio              String?
+  roles            String   // "tenant" | "landlord"
+  profilePicture   String?
+  employmentProof  String?  // e.g. "Employed at XYZ Corp / Self-employed"
+  bankStatement    String?  // e.g. "HBL account ending 4521"
+  createdAt        DateTime @default(now())
+
+  propertiesOwned          Property[]      @relation("LandlordProperties")
+  tenantTenancies          Tenancy[]       @relation("TenantTenancies")
+  landlordTenancies        Tenancy[]       @relation("LandlordTenancies")
+  tenantConnections        Connection[]    @relation("TenantConnections")
+  landlordConnections      Connection[]    @relation("LandlordConnections")
+  sentMessages             Message[]       @relation("SentMessages")
+  receivedMessages         Message[]       @relation("ReceivedMessages")
+  scores                   KirayaScore[]
+  rentalRequestsAsTenant   RentalRequest[] @relation("TenantRentalRequests")
+  rentalRequestsAsLandlord RentalRequest[] @relation("LandlordRentalRequests")
+}
+
+model Property {
+  id          String    @id @default(cuid())
+  landlordId  String
+  title       String
+  description String?
+  address     String
+  city        String
+  rentAmount  Int
+  bedrooms    Int       @default(1)
+  bathrooms   Int       @default(1)
+  area        Int?      // sq ft
+  available   Boolean   @default(true)
+  imageUrl    String?
+  image2Url   String?
+  image3Url   String?
+  createdAt   DateTime  @default(now())
+
+  landlord       User            @relation("LandlordProperties", fields: [landlordId], references: [id])
+  tenancies      Tenancy[]
+  rentalRequests RentalRequest[]
+  messages       Message[]       @relation("MessageProperty")
+}
+
+model Tenancy {
+  id                     String    @id @default(cuid())
+  propertyId             String
+  tenantId               String
+  landlordId             String
+  monthlyRent            Int
+  deposit                Int
+  startDate              DateTime
+  endDate                DateTime?
+  status                 String    // "pending" | "active" | "ended"
+  tenantConfirmedAt      DateTime?
+  landlordConfirmedAt    DateTime?
+  tenantEndRequestedAt   DateTime?
+  landlordEndRequestedAt DateTime?
+  createdAt              DateTime  @default(now())
+
+  property Property  @relation(fields: [propertyId], references: [id])
+  tenant   User      @relation("TenantTenancies", fields: [tenantId], references: [id])
+  landlord User      @relation("LandlordTenancies", fields: [landlordId], references: [id])
+  payments Payment[]
+}
+
+model Payment {
+  id                  String    @id @default(cuid())
+  tenancyId           String
+  expectedDate        DateTime
+  amount              Int
+  paidDate            DateTime?
+  method              String    // "platform" | "jazzcash" | "easypaisa" | "bank_transfer" | "raast"
+  referenceNumber     String?
+  transactionMeta     String?   // JSON string with mock gateway metadata
+  status              String    // "pending" | "confirmed" | "disputed"
+  landlordConfirmedAt DateTime?
+  notes               String?
+  weight              Float     @default(0.5) // 0.5 pending, 1.0 confirmed
+  createdAt           DateTime  @default(now())
+
+  tenancy Tenancy @relation(fields: [tenancyId], references: [id])
+}
+
+model KirayaScore {
+  id                String   @id @default(cuid())
+  userId            String
+  score             Int
+  onTimeRate        Float
+  tenureMonths      Int
+  amountConsistency Float
+  verificationLevel Float
+  generatedAt       DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id])
+}
+
+model Connection {
+  id         String   @id @default(cuid())
+  tenantId   String
+  landlordId String
+  propertyId String?
+  status     String   // "pending" | "accepted" | "rejected"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant   User @relation("TenantConnections", fields: [tenantId], references: [id])
+  landlord User @relation("LandlordConnections", fields: [landlordId], references: [id])
+
+  @@unique([tenantId, landlordId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String
+  propertyId String?
+  createdAt  DateTime @default(now())
+
+  sender   User      @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  property Property? @relation("MessageProperty", fields: [propertyId], references: [id])
+}
+
+model RentalRequest {
+  id               String    @id @default(cuid())
+  tenantId         String
+  landlordId       String
+  propertyId       String
+  quotedRent       Int
+  quotedDeposit    Int       @default(0)
+  preferredStart   DateTime
+  tenantMessage    String?
+  status           String    // "pending" | "accepted" | "rejected"
+  landlordMessage  String?
+  agreedRent       Int?
+  agreedDeposit    Int?
+  agreedStart      DateTime?
+  tenancyId        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant   User     @relation("TenantRentalRequests", fields: [tenantId], references: [id])
+  landlord User     @relation("LandlordRentalRequests", fields: [landlordId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+}
