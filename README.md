@@ -2,6 +2,8 @@
 
 > A rental payment recording and reliability scoring platform for Pakistani renters and landlords.
 
+**[Video Demo & Presentation](https://drive.google.com/drive/folders/1bzgg3qhXqPIrcDIjAUGkR-rTscpRkKrH?usp=drive_link)**
+
 ---
 
 ## The Problem
